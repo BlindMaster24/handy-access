@@ -7,6 +7,19 @@ Operational guide for working in this repository and maintaining a personal fork
 - Never push directly to `upstream`.
 - Use `main` as the only release branch.
 
+## Command Documentation Policy
+
+- If any operational command changes (build, release, signing, sync, CI, dev run), update `AGENTS.md` in the same commit.
+- If a new command is introduced in scripts/workflows/manual runbooks, add it to the relevant section in `AGENTS.md` immediately.
+- Keep command examples executable as-is for this repo (`BlindMaster24/handy-access`).
+
+Minimum sections that must stay current:
+
+- `Development Commands`
+- `Release and Auto-Update Strategy`
+- `Pre-Release Checklist`
+- `Windows Local Run Helpers`
+
 ## Fork Ownership Model
 
 This repo is used in dual mode:
