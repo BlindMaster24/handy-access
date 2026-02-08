@@ -6,6 +6,7 @@ Operational guide for working in this repository and maintaining a personal fork
 
 - Never push directly to `upstream`.
 - Use `main` as the only release branch.
+- Any changed or added operational command must be reflected in `AGENTS.md` before push.
 
 ## Command Documentation Policy
 
@@ -19,6 +20,16 @@ Minimum sections that must stay current:
 - `Release and Auto-Update Strategy`
 - `Pre-Release Checklist`
 - `Windows Local Run Helpers`
+
+## Command Change Checklist (Mandatory)
+
+Run this checklist every time you touch scripts, workflows, runbooks, or command snippets:
+
+1. Update `AGENTS.md` in the same branch before commit.
+2. Add or edit the command in the most relevant section with copy-paste-ready syntax.
+3. Add platform note if command is OS-specific (`Windows`, `macOS`, `Linux`).
+4. Run the command once locally (or with `gh`) to confirm syntax and expected behavior.
+5. Push only after command docs and code/workflow changes are both in sync.
 
 ## Fork Ownership Model
 
@@ -239,6 +250,26 @@ gh run view <run-id> --repo BlindMaster24/handy-access --log-failed
 6. Verify release assets and `latest.json`.
 7. Test update detection on an installed previous app version.
 
+### Release Commands (Copy/Paste)
+
+```powershell
+# 1) Start release workflow from main
+gh workflow run "Release" --repo BlindMaster24/handy-access --ref main
+
+# 2) Find run id and monitor
+gh run list --repo BlindMaster24/handy-access --limit 20
+gh run watch <run-id> --repo BlindMaster24/handy-access --exit-status
+
+# 3) Verify generated draft release
+gh release view v<version> --repo BlindMaster24/handy-access
+
+# 4) Publish release (required for updater latest endpoint)
+gh release edit v<version> --repo BlindMaster24/handy-access --draft=false --latest
+
+# 5) Verify updater metadata is downloadable
+curl -L https://github.com/BlindMaster24/handy-access/releases/latest/download/latest.json
+```
+
 ## Pre-Release Checklist
 
 Run before every release:
@@ -336,6 +367,22 @@ bun run tauri signer generate -w ./.keys/tauri/updater.key
 
 # Sign an updater artifact manually (example)
 bun run tauri signer sign --private-key ./.keys/tauri/updater.key --password "<password>" ./path/to/artifact
+```
+
+### GitHub CLI Accessibility Helpers
+
+```powershell
+# Built-in help topic about accessibility features
+gh help accessibility
+
+# Enable high-contrast 4-bit color mode
+gh config set accessible_colors enabled
+
+# Use non-interactive prompts (better with screen readers)
+gh config set accessible_prompter enabled
+
+# Disable spinner animations
+gh config set spinner disabled
 ```
 
 ### Windows Local Run Helpers
