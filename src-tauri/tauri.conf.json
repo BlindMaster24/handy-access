@@ -67,7 +67,7 @@
       }
     },
     "windows": {
-      "signCommand": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$hasCreds = -not [string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID) -and -not [string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET) -and -not [string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID); if ($hasCreds) { trusted-signing-cli -e https://eus.codesigning.azure.net/ -a CJ-Signing -c cjpais-dev -d Handy %1 } else { Write-Host 'Skipping Windows code signing (Azure secrets not set).'; exit 0 }\""
+      "signCommand": "trusted-signing-cli -e https://eus.codesigning.azure.net/ -a CJ-Signing -c cjpais-dev -d Handy %1"
     }
   },
   "plugins": {

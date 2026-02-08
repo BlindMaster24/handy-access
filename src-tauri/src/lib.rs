@@ -359,9 +359,7 @@ pub fn run() {
         );
 
     #[cfg(target_os = "macos")]
-    {
-        builder = builder.plugin(tauri_nspanel::init());
-    }
+    let builder = builder.plugin(tauri_nspanel::init());
 
     builder
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
