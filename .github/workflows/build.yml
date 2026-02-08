@@ -50,6 +50,30 @@ jobs:
       contents: write
     runs-on: ${{ inputs.platform }}
     steps:
+      - name: Determine signing capabilities
+        id: signing
+        shell: bash
+        run: |
+          has_updater="false"
+          has_windows_signing="false"
+          has_apple_signing="false"
+
+          if [[ -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" && -n "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}" ]]; then
+            has_updater="true"
+          fi
+
+          if [[ -n "${{ secrets.AZURE_CLIENT_ID }}" && -n "${{ secrets.AZURE_CLIENT_SECRET }}" && -n "${{ secrets.AZURE_TENANT_ID }}" ]]; then
+            has_windows_signing="true"
+          fi
+
+          if [[ -n "${{ secrets.APPLE_CERTIFICATE }}" && -n "${{ secrets.APPLE_CERTIFICATE_PASSWORD }}" && -n "${{ secrets.KEYCHAIN_PASSWORD }}" ]]; then
+            has_apple_signing="true"
+          fi
+
+          echo "has_updater_signing=${has_updater}" >> "$GITHUB_OUTPUT"
+          echo "has_windows_signing=${has_windows_signing}" >> "$GITHUB_OUTPUT"
+          echo "has_apple_signing=${has_apple_signing}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -174,8 +198,14 @@ jobs:
           vulkan-use-cache: true
 
       - name: Install trusted-signing-cli
-        if: contains(inputs.platform, 'windows') && inputs.sign-binaries
+        if: contains(inputs.platform, 'windows') && inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true'
         run: cargo install trusted-signing-cli
+
+      - name: Disable Windows platform signing when credentials are unavailable
+        if: contains(inputs.platform, 'windows') && (!inputs.sign-binaries || steps.signing.outputs.has_windows_signing != 'true')
+        shell: bash
+        run: |
+          node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));if(c?.bundle?.windows?.signCommand){delete c.bundle.windows.signCommand;fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');console.log('Disabled bundle.windows.signCommand for this CI run.')}"
 
       - name: Prepare Vulkan SDK for Ubuntu 24.04
         if: contains(inputs.platform, 'ubuntu-24.04') && !contains(inputs.platform, 'arm')
@@ -221,7 +251,7 @@ jobs:
         run: rustup target add ${{ inputs.target }}
 
       - name: import Apple Developer Certificate
-        if: contains(inputs.platform, 'macos') && inputs.sign-binaries
+        if: contains(inputs.platform, 'macos') && inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -237,7 +267,7 @@ jobs:
           security find-identity -v -p codesigning build.keychain
 
       - name: verify certificate
-        if: contains(inputs.platform, 'macos') && inputs.sign-binaries
+        if: contains(inputs.platform, 'macos') && inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true'
         run: |
           CERT_INFO=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application")
           CERT_ID=$(echo "$CERT_INFO" | awk -F'"' '{print $2}')
@@ -261,18 +291,18 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_ID: ${{ inputs.sign-binaries && secrets.APPLE_ID || '' }}
-          APPLE_ID_PASSWORD: ${{ inputs.sign-binaries && secrets.APPLE_ID_PASSWORD || '' }}
-          APPLE_PASSWORD: ${{ inputs.sign-binaries && secrets.APPLE_PASSWORD || '' }}
-          APPLE_TEAM_ID: ${{ inputs.sign-binaries && secrets.APPLE_TEAM_ID || '' }}
-          APPLE_CERTIFICATE: ${{ inputs.sign-binaries && secrets.APPLE_CERTIFICATE || '' }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ inputs.sign-binaries && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
-          APPLE_SIGNING_IDENTITY: ${{ inputs.sign-binaries && env.CERT_ID || '' }}
-          AZURE_CLIENT_ID: ${{ inputs.sign-binaries && secrets.AZURE_CLIENT_ID || '' }}
-          AZURE_CLIENT_SECRET: ${{ inputs.sign-binaries && secrets.AZURE_CLIENT_SECRET || '' }}
-          AZURE_TENANT_ID: ${{ inputs.sign-binaries && secrets.AZURE_TENANT_ID || '' }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-binaries && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-binaries && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          APPLE_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && secrets.APPLE_ID || '' }}
+          APPLE_ID_PASSWORD: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && secrets.APPLE_ID_PASSWORD || '' }}
+          APPLE_PASSWORD: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && secrets.APPLE_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && secrets.APPLE_TEAM_ID || '' }}
+          APPLE_CERTIFICATE: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && secrets.APPLE_CERTIFICATE || '' }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
+          APPLE_SIGNING_IDENTITY: ${{ inputs.sign-binaries && steps.signing.outputs.has_apple_signing == 'true' && env.CERT_ID || '' }}
+          AZURE_CLIENT_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_CLIENT_ID || '' }}
+          AZURE_CLIENT_SECRET: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_CLIENT_SECRET || '' }}
+          AZURE_TENANT_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_TENANT_ID || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-binaries && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-binaries && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           WHISPER_NO_AVX: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
           WHISPER_NO_AVX2: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
         with:
