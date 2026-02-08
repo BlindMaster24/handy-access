@@ -34,3 +34,5 @@ recording_*
 playwright-report/
 test-results/
 blob-report/
+
+.keys/
