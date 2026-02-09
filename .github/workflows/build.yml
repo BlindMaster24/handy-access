@@ -213,9 +213,18 @@ jobs:
 
       - name: Disable updater artifact signing for this CI run
         if: ${{ !inputs.sign-updater || steps.signing.outputs.has_updater_signing != 'true' }}
-        shell: bash
+        shell: python
         run: |
-          node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));if(c?.bundle?.createUpdaterArtifacts!==false){c.bundle={...(c.bundle||{}),createUpdaterArtifacts:false};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');console.log('Disabled bundle.createUpdaterArtifacts for this CI run.')}}"
+          import json
+          from pathlib import Path
+          path = Path("src-tauri/tauri.conf.json")
+          config = json.loads(path.read_text(encoding="utf-8"))
+          bundle = config.get("bundle") or {}
+          if bundle.get("createUpdaterArtifacts") is not False:
+              bundle["createUpdaterArtifacts"] = False
+              config["bundle"] = bundle
+              path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+              print("Disabled bundle.createUpdaterArtifacts for this CI run.")
 
       - name: Prepare Vulkan SDK for Ubuntu 24.04
         if: contains(inputs.platform, 'ubuntu-24.04') && !contains(inputs.platform, 'arm')
