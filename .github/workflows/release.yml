@@ -75,6 +75,8 @@ jobs:
       build-args: ${{ matrix.args }}
       # Set to true after adding Apple/Azure signing secrets in this fork.
       sign-binaries: false
+      # Set to true only after validating TAURI_SIGNING_PRIVATE_KEY and password secrets.
+      sign-updater: false
       asset-prefix: "handy"
       upload-artifacts: false
       release-id: ${{ needs.create-release.outputs.release-id }}

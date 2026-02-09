@@ -32,6 +32,10 @@ on:
         required: false
         type: boolean
         default: false
+      sign-updater:
+        required: false
+        type: boolean
+        default: false
       repository:
         required: false
         type: string
@@ -207,6 +211,12 @@ jobs:
         run: |
           node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));if(c?.bundle?.windows?.signCommand){delete c.bundle.windows.signCommand;fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');console.log('Disabled bundle.windows.signCommand for this CI run.')}"
 
+      - name: Disable updater artifact signing for this CI run
+        if: ${{ !inputs.sign-updater || steps.signing.outputs.has_updater_signing != 'true' }}
+        shell: bash
+        run: |
+          node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));if(c?.bundle?.createUpdaterArtifacts!==false){c.bundle={...(c.bundle||{}),createUpdaterArtifacts:false};fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');console.log('Disabled bundle.createUpdaterArtifacts for this CI run.')}}"
+
       - name: Prepare Vulkan SDK for Ubuntu 24.04
         if: contains(inputs.platform, 'ubuntu-24.04') && !contains(inputs.platform, 'arm')
         run: |
@@ -301,8 +311,8 @@ jobs:
           AZURE_CLIENT_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_CLIENT_ID || '' }}
           AZURE_CLIENT_SECRET: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_CLIENT_SECRET || '' }}
           AZURE_TENANT_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_TENANT_ID || '' }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-binaries && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-binaries && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-updater && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-updater && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           WHISPER_NO_AVX: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
           WHISPER_NO_AVX2: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
         with:

@@ -236,6 +236,10 @@ Important:
 
 - Updater signing requires `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 - Current build workflow also supports platform code signing (Apple and Windows trusted signing). If those signing secrets are missing, some platform release jobs can fail even when updater key is correct.
+- Release workflow now separates toggles:
+  - `sign-binaries` controls platform signing (Windows/macOS).
+  - `sign-updater` controls Tauri updater artifact signing (`latest.json` signatures).
+  - Safe fork default is both `false` until secrets are validated.
 - `release.yml` currently uses `sign-binaries: false` for fork stability (no Apple/Azure signing secrets required).
 
 ### 4.1) Why Upstream Passes with Similar Workflow Files
@@ -346,6 +350,11 @@ gh run view <run-id> --repo BlindMaster24/handy-access --log-failed
 - Signature: `failed to decode base64 secret key: Invalid symbol ...`
   - Cause: bad `TAURI_SIGNING_PRIVATE_KEY` secret format.
   - Fix: re-upload `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` using PowerShell-safe commands above.
+
+- Signature: `failed to decode secret key: incorrect updater private key password: Missing comment in secret key`
+  - Cause: invalid updater key/password pair or malformed secret content.
+  - Temporary unblock: keep `sign-updater: false` in `.github/workflows/release.yml` to build release artifacts without updater metadata signing.
+  - Permanent fix: regenerate updater keypair, update `pubkey` in `src-tauri/tauri.conf.json`, re-upload both signing secrets, then set `sign-updater: true`.
 
 - Signature (Windows): `!uninstfinalize expects 1-3 parameters` and later `failed to bundle project (os error 2)`
   - Cause: complex Windows `signCommand` with embedded PowerShell/quotes breaks NSIS finalize invocation.
