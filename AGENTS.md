@@ -236,6 +236,41 @@ Important:
 
 - Updater signing requires `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 - Current build workflow also supports platform code signing (Apple and Windows trusted signing). If those signing secrets are missing, some platform release jobs can fail even when updater key is correct.
+- `release.yml` currently uses `sign-binaries: false` for fork stability (no Apple/Azure signing secrets required).
+
+### 4.1) Why Upstream Passes with Similar Workflow Files
+
+Workflow YAML can be identical while behavior differs because GitHub Secrets are repository-specific and not stored in git.
+
+- `cjpais/Handy` has platform-signing secrets configured (Apple + Windows trusted signing), so `sign-binaries: true` works.
+- `BlindMaster24/handy-access` currently has updater secrets only (`TAURI_SIGNING_PRIVATE_KEY*`), so platform-signing steps fail when enabled.
+- Same files, different secrets => different CI outcomes.
+
+### 4.2) Platform Signing Modes (Fork Policy)
+
+Use one of two supported release modes:
+
+1. **Unsigned platform binaries (recommended default for this fork)**
+   - Keep `release.yml` with:
+     - `sign-binaries: false`
+   - Outcome:
+     - Windows/macOS/Linux builds complete without Apple/Azure secrets.
+     - Updater metadata still generated when updater secrets exist.
+
+2. **Fully signed platform binaries (Apple + Windows)**
+   - Set `release.yml` back to:
+     - `sign-binaries: true`
+   - Required secrets before enabling:
+     - macOS: `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `KEYCHAIN_PASSWORD` (and related Apple notarization credentials if used)
+     - Windows: `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`
+     - Updater: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+   - Only enable after secrets are validated in repo settings.
+
+### 4.3) Cost/Account Notes for Signing
+
+- Apple code signing/notarization generally requires an active Apple Developer Program membership (paid).
+- Windows trusted signing through Azure is generally a paid cloud signing path.
+- These costs/credentials are independent from app source code and explain why upstream can sign while a fork may not.
 
 Trigger release workflow manually:
 
@@ -278,6 +313,20 @@ gh release edit v<version> --repo BlindMaster24/handy-access --draft=false --lat
 
 # 5) Verify updater metadata is downloadable
 curl -L https://github.com/BlindMaster24/handy-access/releases/latest/download/latest.json
+```
+
+### Toggle Release Signing Quickly
+
+Disable platform signing (default fork-safe mode):
+
+```powershell
+(Get-Content .github/workflows/release.yml -Raw).Replace('sign-binaries: true','sign-binaries: false') | Set-Content .github/workflows/release.yml
+```
+
+Enable platform signing (only after Apple/Azure secrets are configured):
+
+```powershell
+(Get-Content .github/workflows/release.yml -Raw).Replace('sign-binaries: false','sign-binaries: true') | Set-Content .github/workflows/release.yml
 ```
 
 ### Release Failure Triage (Known Cases)
