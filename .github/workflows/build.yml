@@ -211,6 +211,26 @@ jobs:
         run: |
           node -e "const fs=require('fs');const p='src-tauri/tauri.conf.json';const c=JSON.parse(fs.readFileSync(p,'utf8'));if(c?.bundle?.windows?.signCommand){delete c.bundle.windows.signCommand;fs.writeFileSync(p,JSON.stringify(c,null,2)+'\n');console.log('Disabled bundle.windows.signCommand for this CI run.')}"
 
+      - name: Disable macOS platform signing when credentials are unavailable
+        if: contains(inputs.platform, 'macos') && (!inputs.sign-binaries || steps.signing.outputs.has_apple_signing != 'true')
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+          path = Path("src-tauri/tauri.conf.json")
+          config = json.loads(path.read_text(encoding="utf-8"))
+          bundle = config.get("bundle") or {}
+          mac = bundle.get("macOS") or {}
+          changed = False
+          if "signingIdentity" in mac:
+              del mac["signingIdentity"]
+              changed = True
+          if changed:
+              bundle["macOS"] = mac
+              config["bundle"] = bundle
+              path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+              print("Disabled bundle.macOS.signingIdentity for this CI run.")
+
       - name: Disable updater artifact signing for this CI run
         if: ${{ !inputs.sign-updater || steps.signing.outputs.has_updater_signing != 'true' }}
         shell: python
