@@ -12,22 +12,15 @@ export const ModelSettingsCard: React.FC = () => {
 
   const currentModelInfo = models.find((m: ModelInfo) => m.id === currentModel);
 
+  // Only Whisper models support manual language selection
   const supportsLanguageSelection = currentModelInfo?.engine_type === "Whisper";
   const supportsTranslation = currentModelInfo?.supports_translation ?? false;
-  const hasAnySettings = Boolean(currentModelInfo);
+  const hasAnySettings = supportsLanguageSelection || supportsTranslation;
 
   // Don't render anything if no model is selected or no settings available
   if (!currentModel || !currentModelInfo || !hasAnySettings) {
     return null;
   }
-
-  const supportedLanguages = currentModelInfo.supported_languages ?? [];
-  const languageOptions = supportsLanguageSelection
-    ? ["auto", ...supportedLanguages]
-    : ["auto"];
-  const languageDescription = supportsLanguageSelection
-    ? t("settings.general.language.description")
-    : t("settings.general.language.descriptionUnsupported");
 
   return (
     <SettingsGroup
@@ -35,13 +28,9 @@ export const ModelSettingsCard: React.FC = () => {
         model: currentModelInfo.name,
       })}
     >
-      <LanguageSelector
-        descriptionMode="tooltip"
-        grouped={true}
-        description={languageDescription}
-        allowedLanguageCodes={languageOptions}
-        disabled={!supportsLanguageSelection}
-      />
+      {supportsLanguageSelection && (
+        <LanguageSelector descriptionMode="tooltip" grouped={true} />
+      )}
       {supportsTranslation && (
         <TranslateToEnglish descriptionMode="tooltip" grouped={true} />
       )}

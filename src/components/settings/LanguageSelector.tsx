@@ -8,17 +8,11 @@ import { LANGUAGES } from "../../lib/constants/languages";
 interface LanguageSelectorProps {
   descriptionMode?: "inline" | "tooltip";
   grouped?: boolean;
-  description?: string;
-  allowedLanguageCodes?: string[];
-  disabled?: boolean;
 }
 
 export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   descriptionMode = "tooltip",
   grouped = false,
-  description,
-  allowedLanguageCodes,
-  disabled = false,
 }) => {
   const { t } = useTranslation();
   const { getSetting, updateSetting, resetSetting, isUpdating } = useSettings();
@@ -52,24 +46,15 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     }
   }, [isOpen]);
 
-  const availableLanguages = useMemo(() => {
-    if (!allowedLanguageCodes || allowedLanguageCodes.length === 0) {
-      return LANGUAGES;
-    }
-    const allowed = new Set(allowedLanguageCodes);
-    return LANGUAGES.filter((language) => allowed.has(language.value));
-  }, [allowedLanguageCodes]);
-
   const filteredLanguages = useMemo(
     () =>
-      availableLanguages.filter((language) =>
+      LANGUAGES.filter((language) =>
         language.label.toLowerCase().includes(searchQuery.toLowerCase()),
       ),
-    [availableLanguages, searchQuery],
+    [searchQuery],
   );
 
   const selectedLanguageName =
-    availableLanguages.find((lang) => lang.value === selectedLanguage)?.label ||
     LANGUAGES.find((lang) => lang.value === selectedLanguage)?.label ||
     t("settings.general.language.auto");
 
@@ -84,7 +69,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   };
 
   const handleToggle = () => {
-    if (disabled || isUpdating("selected_language")) return;
+    if (isUpdating("selected_language")) return;
     setIsOpen(!isOpen);
   };
 
@@ -105,7 +90,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   return (
     <SettingContainer
       title={t("settings.general.language.title")}
-      description={description ?? t("settings.general.language.description")}
+      description={t("settings.general.language.description")}
       descriptionMode={descriptionMode}
       grouped={grouped}
     >
@@ -116,12 +101,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             className={`px-2 py-1 text-sm font-semibold bg-mid-gray/10 border border-mid-gray/80 rounded min-w-[200px] text-start flex items-center justify-between transition-all duration-150 ${
               isUpdating("selected_language")
                 ? "opacity-50 cursor-not-allowed"
-                : disabled
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-logo-primary/10 cursor-pointer hover:border-logo-primary"
+                : "hover:bg-logo-primary/10 cursor-pointer hover:border-logo-primary"
             }`}
             onClick={handleToggle}
-            disabled={disabled || isUpdating("selected_language")}
+            disabled={isUpdating("selected_language")}
           >
             <span className="truncate">{selectedLanguageName}</span>
             <svg

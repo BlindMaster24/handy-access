@@ -80,12 +80,7 @@ export const syncLanguageFromSettings = async () => {
   try {
     const result = await commands.getAppSettings();
     if (result.status === "ok" && result.data.app_language) {
-      const savedLanguage = result.data.app_language;
-      const supported =
-        savedLanguage === "auto"
-          ? getSupportedLanguage(await locale())
-          : getSupportedLanguage(savedLanguage);
-
+      const supported = getSupportedLanguage(result.data.app_language);
       if (supported && supported !== i18n.language) {
         await i18n.changeLanguage(supported);
       }
