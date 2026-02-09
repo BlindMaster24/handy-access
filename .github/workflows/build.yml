@@ -326,7 +326,8 @@ jobs:
           fi
           echo "platform=${patched_platform}" >> $GITHUB_OUTPUT
 
-      - name: Build with Tauri
+      - name: Build with Tauri (signed)
+        if: ${{ inputs.sign-binaries && (steps.signing.outputs.has_windows_signing == 'true' || steps.signing.outputs.has_apple_signing == 'true') }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -340,6 +341,22 @@ jobs:
           AZURE_CLIENT_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_CLIENT_ID || '' }}
           AZURE_CLIENT_SECRET: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_CLIENT_SECRET || '' }}
           AZURE_TENANT_ID: ${{ inputs.sign-binaries && steps.signing.outputs.has_windows_signing == 'true' && secrets.AZURE_TENANT_ID || '' }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-updater && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-updater && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          WHISPER_NO_AVX: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
+          WHISPER_NO_AVX2: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}
+        with:
+          tagName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
+          releaseName: ${{ inputs.release-id && format('v{0}', steps.get-version.outputs.version) || '' }}
+          releaseId: ${{ inputs.release-id }}
+          assetNamePattern: ${{ steps.patch-release-name.outputs.platform }}
+          args: ${{ inputs.build-args }}
+
+      - name: Build with Tauri (unsigned)
+        if: ${{ !inputs.sign-binaries || (steps.signing.outputs.has_windows_signing != 'true' && steps.signing.outputs.has_apple_signing != 'true') }}
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ inputs.sign-updater && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ inputs.sign-updater && steps.signing.outputs.has_updater_signing == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
           WHISPER_NO_AVX: ${{ contains(inputs.platform, 'ubuntu') && !contains(inputs.platform, 'arm') && 'ON' || '' }}

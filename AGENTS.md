@@ -361,6 +361,10 @@ gh run view <run-id> --repo BlindMaster24/handy-access --log-failed
   - Fix: keep `src-tauri/tauri.conf.json` `bundle.windows.signCommand` in simple form:
     - `trusted-signing-cli -e https://eus.codesigning.azure.net/ -a CJ-Signing -c cjpais-dev -d Handy %1`
 
+- Signature (macOS, unsigned release mode): `security: SecKeychainItemImport ...` with `failed to import keychain certificate`
+  - Cause: Apple signing env vars were present as empty values and still triggered signing import path in Tauri action.
+  - Fix: keep workflow split between `Build with Tauri (signed)` and `Build with Tauri (unsigned)` so unsigned runs do not pass Apple signing env vars at all.
+
 - Signature (Rust compile): `cannot assign twice to immutable variable 'builder'`
   - Cause: reassigning non-`mut` builder in `src-tauri/src/lib.rs`.
   - Fix: keep builder initialization and conditional plugin chaining compile-safe across platforms.
